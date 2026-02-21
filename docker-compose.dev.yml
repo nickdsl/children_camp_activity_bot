@@ -1,0 +1,21 @@
+# Запуск текущего кода без сборки образа (для проверки функционала).
+# Использование: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#
+# Первый запуск: установит зависимости в volume. Дальше код берётся с хоста,
+# перезапуск контейнера подхватывает изменения (или используйте dev с --watch).
+
+services:
+  bot:
+    image: node:20-alpine
+    working_dir: /app
+    env_file: .env
+    volumes:
+      - .:/app
+      - node_modules_dev:/app/node_modules
+      - ./data:/app/data
+    command: sh -c "npm install --omit=dev && node src/index.js"
+    # С автоперезагрузкой при изменении файлов (раскомментируйте при необходимости):
+    # command: sh -c "npm install --omit=dev && node --watch src/index.js"
+
+volumes:
+  node_modules_dev:

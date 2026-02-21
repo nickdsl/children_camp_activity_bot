@@ -1,0 +1,20 @@
+{
+  "name": "department-subscription-bot",
+  "version": "1.0.0",
+  "description": "Telegram bot for children to subscribe to departments (max 2 per child, capacity-limited)",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "keywords": ["telegram", "bot", "departments"],
+  "license": "MIT",
+  "dependencies": {
+    "csv-parse": "^5.5.2",
+    "dotenv": "^16.3.1",
+    "googleapis": "^144.0.0",
+    "node-telegram-bot-api": "^0.66.0",
+    "pdfkit": "^0.15.0",
+    "dejavu-fonts-ttf": "^2.37.3"
+  }
+}
