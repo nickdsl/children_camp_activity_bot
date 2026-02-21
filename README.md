@@ -1,126 +1,144 @@
-# Department Subscription Telegram Bot
+# Telegram-бот подписки на направления
 
-A Telegram bot that lets children subscribe to up to **2 departments** out of **25**. Each department has a capacity of **25** children. The bot records name, surname, and chosen departments, and enforces capacity limits.
+Telegram-бот, позволяющий детям записаться в **4 направления** из **25**. В каждом направлении — до **25** детей. Бот сохраняет имя, фамилию и выбранные направления и проверяет лимиты мест.
 
-## Setup
+"Направление" - это площадка с какой то активностью.
+Площадка работает циклично с группами детей. Время делится по слотам.
+Каждый слот занимает 1 час. Старт с 9 утра.
 
-1. **Create a bot** in Telegram: open [@BotFather](https://t.me/BotFather), send `/newbot`, follow the steps, and copy the token.
+Концепция: ребенок используя свой клиент telegram вступает в диалог с ботом в ходе которого бот его онбордит на любые 4 направления.
 
-2. **Install dependencies**
+Условия:
+- нужно выбрать 4 направления (не меньше)
+- временные слоты совпадать не должны (нельзя быть больше чем в 1 месте в 1 момент времени)
+
+Telegram-бот, позволяющий детям записаться в **4 направления** из **25**. В каждом направлении — до **25** детей. Бот сохраняет имя, фамилию и выбранные направления и проверяет лимиты мест.
+
+# Прежде чем Вы начнете что то делать с этим проектом
+## Внимание
+Следует понимать, что я не программист (профессиональный). Данный проект создан в стиле вайб-кодинга с помощью Cursor и хз какой модели.
+Функционал с Google spreadsheets не был протестирован. Работа велась чисто с json файловой базой.
+Если планируется использовать подобный сервис на больших объемах детей лучше адаприровать проект под нормальную базу данных.
+
+## Установка
+
+1. **Создайте бота** в Telegram: откройте [@BotFather](https://t.me/BotFather), отправьте `/newbot`, выполните шаги и скопируйте токен.
+
+2. **Установите зависимости**
    ```bash
    npm install
    ```
 
-3. **Configure**
-   - Copy `.env.example` to `.env`
-   - Put your bot token in `.env`:
+3. **Настройка**
+   - Скопируйте `.env.example` в `.env`
+   - Укажите токен бота в `.env`:
      ```
      BOT_TOKEN=123456:ABC-DEF...
      ```
 
-4. **Run**
+4. **Запуск**
    ```bash
    npm start
    ```
-   For development with auto-restart: `npm run dev`
+   Для разработки с автоперезапуском: `npm run dev`
 
-## Running in Docker
+## Запуск в Docker
 
-1. **Create `.env`** (same as above: `BOT_TOKEN` and optional Google Sheets vars).
+1. **Создайте `.env`** (как выше: `BOT_TOKEN` и при необходимости переменные для Google Sheets).
 
-2. **Build and run**
+2. **Сборка и запуск**
    ```bash
    docker compose up --build -d
    ```
-   Logs: `docker compose logs -f bot`
+   Логи: `docker compose logs -f bot`
 
-3. **Data persistence**  
-   Registrations are stored in `./data`. The Compose file mounts `./data` into the container so data survives restarts.
+3. **Сохранение данных**  
+   Регистрации хранятся в `./data`. В Compose файле каталог `./data` примонтирован в контейнер, поэтому данные сохраняются после перезапуска.
 
-4. **Using a Google key file in Docker**  
-   If you use `GOOGLE_SERVICE_ACCOUNT_KEY_PATH` instead of `GOOGLE_SERVICE_ACCOUNT_KEY_JSON`, mount the key into the container. In `docker-compose.yml`, add under `volumes`:
+4. **Использование ключа Google в Docker**  
+   Если вы используете `GOOGLE_SERVICE_ACCOUNT_KEY_PATH` вместо `GOOGLE_SERVICE_ACCOUNT_KEY_JSON`, примонтируйте файл ключа в контейнер. В `docker-compose.yml` добавьте в `volumes`:
    ```yaml
    - ./path/to/your-key.json:/app/google-key.json:ro
    ```
-   and set in `.env`: `GOOGLE_SERVICE_ACCOUNT_KEY_PATH=/app/google-key.json`.
+   и в `.env` укажите: `GOOGLE_SERVICE_ACCOUNT_KEY_PATH=/app/google-key.json`.
 
-5. **Stop**
+5. **Остановка**
    ```bash
    docker compose down
    ```
 
-## Flow
+## Сценарий работы
 
-- **Child** opens the bot and sends `/start`.
-- **View departments**: `/departments` — lists directions and free slots.
-- **Subscribe**: `/subscribe` — the bot remembers the child by Telegram user ID.  
-  - **First time:** asks for name and surname, then choice of 2 departments.  
-  - **Already registered:** does *not* ask name or surname again; goes straight to choosing 2 directions (to change subscription).
-- **My subscription**: `/my` — shows the child’s current registration.
+- **Ребёнок** открывает бота и отправляет `/start`.
+- **Просмотр направлений**: `/departments` — список направлений и свободных мест.
+- **Запись**: `/subscribe` — бот запоминает ребёнка по Telegram user ID.  
+  - **Первый раз:** запрашивает имя и фамилию, затем выбор 2 направлений.  
+  - **Уже зарегистрирован:** имя и фамилию не спрашивает; сразу предлагает выбрать 2 направления (для изменения записи).
+- **Моя запись**: `/my` — показывает текущую регистрацию ребёнка.
 
-Capacity is checked when choosing departments; full departments are not selectable. Data is stored in `data/registrations.json` and optionally synced to Google Sheets.
+При выборе направлений проверяется лимит мест; заполненные направления нельзя выбрать. Данные хранятся в `data/registrations.json` и при желании синхронизируются с Google Таблицами.
 
-## Admin mode
+## Режим администратора
 
-If `ADMIN_COMMAND` and `ADMIN_PASSWORD` are set in `.env`, the bot has an admin mode:
+Если в `.env` заданы `ADMIN_COMMAND` и `ADMIN_PASSWORD`, в боте доступен режим администратора:
 
-1. Send the **secret command** (e.g. `/admin_secret` — the value of `ADMIN_COMMAND`).
-2. When asked, enter the **admin password** (`ADMIN_PASSWORD`).
-3. After that you get an admin menu (session lasts 60 minutes). You can:
-   - **Список по направлениям** — list of subscribed children grouped by department.
-   - **Выбрать ребёнка** — pick a child from the list, then see their details, **Изменить запись** (re-subscribe to 2 new departments), or **Удалить запись** (unsubscribe).
-   - **Управление направлениями** — create, edit, or delete departments:
-     - **Добавить направление** — enter name and optional description (new department, capacity 25).
-     - **Редактировать описание** — pick a department and set or change its description.
-     - **Удалить направление** — pick a department to delete. All children subscribed to that department are automatically unsubscribed from it (their other subscriptions stay). The bot sends each affected child a notification that the direction is no longer available and they can re-subscribe via /subscribe.
-   - **Выход** — exit admin mode.
+1. Отправьте **секретную команду** (например `/admin_secret` — значение `ADMIN_COMMAND`).
+2. По запросу введите **пароль администратора** (`ADMIN_PASSWORD`).
+3. После этого откроется меню администратора (сессия 60 минут). Доступно:
+   - **Список по направлениям** — список записанных детей по направлениям.
+   - **Выбрать ребёнка** — выбрать ребёнка из списка, затем просмотреть данные, **Изменить запись** (записать в 2 других направления) или **Удалить запись** (отменить запись).
+   - **Управление направлениями** — создание, редактирование и удаление направлений:
+     - **Добавить направление** — ввести название и при необходимости описание (новое направление, лимит 25).
+     - **Редактировать описание** — выбрать направление и задать или изменить описание.
+     - **Удалить направление** — выбрать направление для удаления. Все дети, записанные в это направление, автоматически отписываются от него (остальные записи сохраняются). Каждому затронутому ребёнку бот отправляет уведомление, что направление больше недоступно и можно записаться заново через /subscribe.
+   - **Выход** — выход из режима администратора.
 
-Example `.env`:
+Пример `.env`:
 
 ```env
 ADMIN_COMMAND=/admin_secret
-ADMIN_PASSWORD=your_secure_password
+ADMIN_PASSWORD=ваш_надёжный_пароль
 ```
 
-## Storing in Google Sheets
+## Сохранение в Google Таблицы
 
-Registrations can be appended to a Google Sheet so you can view or share them in a spreadsheet (or export/print).
+Регистрации можно добавлять в Google Таблицу для просмотра и обмена в виде таблицы (или экспорта/печати).
 
-1. **Create a Google Cloud project and enable the Sheets API**
-   - Go to [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Enable **Google Sheets API**.
+1. **Создайте проект в Google Cloud и включите Google Sheets API**
+   - Перейдите в [Google Cloud Console](https://console.cloud.google.com/) → API и сервисы → Включите **Google Sheets API**.
 
-2. **Create a service account**
-   - APIs & Services → Credentials → Create Credentials → Service account.
-   - Create the account, then open it → Keys → Add key → Create new key → JSON. Download the JSON file.
+2. **Создайте сервисный аккаунт**
+   - API и сервисы → Учётные данные → Создать учётные данные → Сервисный аккаунт.
+   - Создайте аккаунт, откройте его → Ключи → Добавить ключ → Создать новый ключ → JSON. Скачайте JSON-файл.
 
-3. **Create the spreadsheet**
-   - In [Google Sheets](https://sheets.google.com), create a new spreadsheet.
-   - Copy the **spreadsheet ID** from the URL: `https://docs.google.com/spreadsheets/d/<SPREADSHEET_ID>/edit`.
-   - Share the spreadsheet with the **service account email** (from the JSON, e.g. `something@project.iam.gserviceaccount.com`) as **Editor**. You don’t need to create a sheet tab—the bot will do it.
+3. **Создайте таблицу**
+   - В [Google Таблицах](https://sheets.google.com) создайте новую таблицу.
+   - Скопируйте **ID таблицы** из URL: `https://docs.google.com/spreadsheets/d/<SPREADSHEET_ID>/edit`.
+   - Откройте доступ к таблице для **email сервисного аккаунта** (из JSON, например `something@project.iam.gserviceaccount.com`) с правами **Редактор**. Лист создавать не нужно — бот создаст его сам.
 
-4. **Configure the bot**
-   - In `.env` set:
+4. **Настройте бота**
+   - В `.env` укажите:
      - `GOOGLE_SHEETS_ID=<SPREADSHEET_ID>`
-     - Either `GOOGLE_SERVICE_ACCOUNT_KEY_PATH=./path/to/your-key.json`  
-       or paste the whole JSON key as one line in `GOOGLE_SERVICE_ACCOUNT_KEY_JSON=...`
+     - Либо `GOOGLE_SERVICE_ACCOUNT_KEY_PATH=./path/to/your-key.json`  
+       либо вставьте весь JSON ключа одной строкой в `GOOGLE_SERVICE_ACCOUNT_KEY_JSON=...`
 
-5. **Run the bot**
-   - On startup the bot **initializes the Google Sheet** when configured:
-     - **Registrations** sheet: one tab with columns Name, Surname, Department 1, Department 2, Telegram User ID, Date (all subscriptions).
-     - **One sheet per department**: a separate tab for each department, named after the department (e.g. "Art & Crafts", "Music"). Each has a members table with columns **Name**, **Surname**, **Telegram User ID**, **Subscribed at**, listing the children who subscribed to that department.
-   - Every new or updated subscription appends a row to **Registrations** and one row to each of the two chosen **department sheets**. The bot still keeps `data/registrations.json` as the source of truth for capacity and in-bot behaviour.
+5. **Запустите бота**
+   - При запуске с настроенным Google Sheets бот **инициализирует таблицу**:
+     - **Регистрации** — один лист с колонками Имя, Фамилия, Направление 1, Направление 2, Telegram User ID, Дата (все записи).
+     - **Лист по каждому направлению** — отдельный лист для каждого направления с именем направления (например «Творчество», «Музыка»). На каждом — таблица участников с колонками **Имя**, **Фамилия**, **Telegram User ID**, **Дата записи** для детей, записанных в это направление.
+   - Каждая новая или обновлённая запись добавляет строку в **Регистрации** и по строке в каждый из двух выбранных **листов направлений**. Бот по-прежнему хранит `data/registrations.json` как основной источник для лимитов и поведения в боте.
 
-## Departments (data/departments.json)
+## Направления (data/departments.json)
 
-The list of departments is stored in **`data/departments.json`**. On first run, it is created from:
+Список направлений хранится в **`data/departments.json`**. При первом запуске он создаётся из:
 
-- **`svod.csv`** in the project root (if present): column **«Название активности»** for names, **«Описание в формате рекламного объявления»** for descriptions.
-- Otherwise, the built‑in list of 25 directions in `src/config/departments.js` is used.
+- **`svod.csv`** в корне проекта (если есть): колонка **«Название активности»** — названия, **«Описание в формате рекламного объявления»** — описания.
+- Иначе используется встроенный список из 25 направлений в `src/config/departments.js`.
 
-After that, admins can **add**, **edit description**, and **delete** departments from the admin menu. Descriptions are shown to children via **/about** or **/описания**. When a department is deleted, all subscriptions to it are removed and affected children receive a notification that they can re-subscribe to other directions via /subscribe.
+После этого администраторы могут **добавлять**, **редактировать описание** и **удалять** направления через меню администратора. Описания показываются детям по командам **/about** или **/описания**. При удалении направления все записи на него снимаются, затронутым детям отправляется уведомление, что можно записаться на другие направления через /subscribe.
 
-## Data
+## Данные
 
-- **Departments**: `data/departments.json` (created on first run from CSV or default). Each entry: `id`, `name`, `description` (optional), `capacity`. Admins can change it via the bot.
-- **Registrations**: `data/registrations.json` (created automatically). Each record: `telegramUserId`, `name`, `surname`, `departmentIds` (array of 2), and timestamps.
-- **Google Sheets** (optional): the bot creates a **Registrations** sheet (all subscriptions) and one sheet per department (name = department name) with a members table (Name, Surname, Telegram User ID, Subscribed at). Each subscription is appended to Registrations and to both chosen department sheets.
+- **Направления**: `data/departments.json` (создаётся при первом запуске из CSV или по умолчанию). Каждая запись: `id`, `name`, `description` (необязательно), `capacity`. Администраторы могут менять через бота.
+- **Регистрации**: `data/registrations.json` (создаётся автоматически). Каждая запись: `telegramUserId`, `name`, `surname`, `departmentIds` (массив из 2), плюс метки времени.
+- **Google Таблицы** (необязательно): бот создаёт лист **Регистрации** (все записи) и по одному листу на направление (имя = название направления) с таблицей участников (Имя, Фамилия, Telegram User ID, Дата записи). Каждая запись добавляется в Регистрации и в оба листа выбранных направлений.
